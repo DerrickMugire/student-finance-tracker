@@ -83,6 +83,25 @@
 </div>
 
 <h3>Transaction History</h3>
+<div>
+    <label for="sort-transactions">Sort transactions</label>
+    <select id="sort-transactions">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="amount-desc">Amount: highest first</option>
+        <option value="amount-asc">Amount: lowest first</option>
+    </select>
+</div>
+
+<div>
+    <label for="transaction-search">Search transactions</label>
+    <input
+        type="search"
+        id="transaction-search"
+        placeholder="Search by description or category..."
+        autocomplete="off"
+    >
+</div>
 <table>
     <thead>
         <tr>

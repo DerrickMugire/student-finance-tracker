@@ -2,7 +2,11 @@
 document.addEventListener("DOMContentLoaded", function () {
     const transactionForm = document.getElementById("transaction-form");
     const transactionList = document.getElementById("transaction-list");
+   const transactionSearch =
+    document.getElementById("transaction-search");
 
+const sortTransactions =
+    document.getElementById("sort-transactions");
     const totalIncomeElement = document.getElementById("total-income");
     const totalExpensesElement = document.getElementById("total-expenses");
     const balanceElement = document.getElementById("balance");
@@ -100,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     JSON.stringify(transactions)
                 );
 
-                row.remove();
+                 renderTransactions();
                 updateSummary();
             }
         });
@@ -117,7 +121,26 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
         transactionList.appendChild(row);
+        applyTransactionSearch();
     }
+
+function applyTransactionSearch() {
+    const searchTerm = transactionSearch.value.trim().toLowerCase();
+    const rows = transactionList.querySelectorAll("tr");
+
+    rows.forEach(function (row) {
+        const description = row.cells[0].textContent.toLowerCase();
+        const category = row.cells[3].textContent.toLowerCase();
+
+        const matchesSearch =
+            description.includes(searchTerm) ||
+            category.includes(searchTerm);
+
+        row.hidden = !matchesSearch;
+    });
+}
+
+transactionSearch.addEventListener("input", applyTransactionSearch);
 
     transactionForm.addEventListener("submit", function (event) {
         event.preventDefault();
@@ -174,15 +197,45 @@ function isValidDate(dateString) {
             JSON.stringify(transactions)
         );
 
-        displayTransaction(transaction);
+          renderTransactions();
         updateSummary();
         transactionForm.reset();
     });
 
-    transactions.forEach(function (transaction) {
-        displayTransaction(transaction);
+    
+    function renderTransactions() {
+        transactionList.innerHTML = "";
+
+        const sortedTransactions = [...transactions];
+
+        if (sortTransactions.value === "date-desc") {
+            sortedTransactions.sort((a, b) =>
+                b.date.localeCompare(a.date)
+            );
+        } else if (sortTransactions.value === "date-asc") {
+            sortedTransactions.sort((a, b) =>
+                a.date.localeCompare(b.date)
+            );
+        } else if (sortTransactions.value === "amount-desc") {
+            sortedTransactions.sort((a, b) =>
+                b.amount - a.amount
+            );
+        } else if (sortTransactions.value === "amount-asc") {
+            sortedTransactions.sort((a, b) =>
+                a.amount - b.amount
+            );
+        }
+
+        sortedTransactions.forEach(function (transaction) {
+            displayTransaction(transaction);
+        });
+    }
+
+    sortTransactions.addEventListener("change", function () {
+        renderTransactions();
     });
 
+    renderTransactions();
     updateSummary();
 });
 
