@@ -10,56 +10,211 @@ const sortTransactions =
     const totalIncomeElement = document.getElementById("total-income");
     const totalExpensesElement = document.getElementById("total-expenses");
     const balanceElement = document.getElementById("balance");
-    const categoryList = document.getElementById("category-list");
+    const transactionCountElement =
+    document.getElementById("transaction-count");
 
+const averageExpenseElement =
+    document.getElementById("average-expense");
+
+const largestExpenseElement =
+    document.getElementById("largest-expense");
+    const categoryList = document.getElementById("category-list");
+    const monthlySummaryList =
+    document.getElementById("monthly-summary-list");
+const budgetForm = document.getElementById("budget-form");
+const budgetCategory = document.getElementById("budget-category");
+const budgetAmount = document.getElementById("budget-amount");
+const budgetList = document.getElementById("budget-list");
+const budgets = JSON.parse(
+    localStorage.getItem("budgets")
+) || {};
     const transactions = JSON.parse(
         localStorage.getItem("transactions")
     ) || [];
+    let editingTransaction = null;
 
-    function updateSummary() {
-        let totalIncome = 0;
-        let totalExpenses = 0;
-        const expensesByCategory = {};
+        
+function updateSummary() {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    const expensesByCategory = {};
 
-        transactions.forEach(function (transaction) {
-            if (transaction.type === "income") {
-                totalIncome += transaction.amount;
-            } else {
-                totalExpenses += transaction.amount;
-
-                const category = transaction.category || "Other";
-
-                if (expensesByCategory[category] === undefined) {
-                    expensesByCategory[category] = 0;
-                }
-
-                expensesByCategory[category] += transaction.amount;
-            }
-        });
-
-        totalIncomeElement.textContent = totalIncome.toFixed(2);
-        totalExpensesElement.textContent = totalExpenses.toFixed(2);
-        balanceElement.textContent = (totalIncome - totalExpenses).toFixed(2);
-
-        categoryList.innerHTML = "";
-
-        const categories = Object.keys(expensesByCategory);
-
-        if (categories.length === 0) {
-            const item = document.createElement("li");
-            item.textContent = "No expenses recorded yet.";
-            categoryList.appendChild(item);
+    transactions.forEach(function (transaction) {
+        if (transaction.type === "income") {
+            totalIncome += transaction.amount;
         } else {
-            categories.forEach(function (category) {
-                const item = document.createElement("li");
-                item.textContent =
-                    category + ": " +
-                    expensesByCategory[category].toFixed(2);
+            totalExpenses += transaction.amount;
 
-                categoryList.appendChild(item);
-            });
+            const category = transaction.category || "Other";
+
+            if (expensesByCategory[category] === undefined) {
+                expensesByCategory[category] = 0;
+            }
+
+            expensesByCategory[category] += transaction.amount;
         }
+    });
+
+    totalIncomeElement.textContent = totalIncome.toFixed(2);
+    totalExpensesElement.textContent = totalExpenses.toFixed(2);
+    balanceElement.textContent =
+        (totalIncome - totalExpenses).toFixed(2);
+
+    transactionCountElement.textContent = transactions.length;
+
+    const expenses = transactions.filter(function (transaction) {
+        return transaction.type === "expense";
+    });
+
+    const totalExpenseAmount = expenses.reduce(function (total, transaction) {
+        return total + transaction.amount;
+    }, 0);
+
+    const averageExpense = expenses.length > 0
+        ? totalExpenseAmount / expenses.length
+        : 0;
+
+    const largestExpense = expenses.length > 0
+        ? Math.max(...expenses.map(function (transaction) {
+            return transaction.amount;
+        }))
+        : 0;
+
+    averageExpenseElement.textContent = averageExpense.toFixed(2);
+    largestExpenseElement.textContent = largestExpense.toFixed(2);
+
+    categoryList.innerHTML = "";
+
+    const categories = Object.keys(expensesByCategory);
+
+    if (categories.length === 0) {
+        const item = document.createElement("li");
+        item.textContent = "No expenses recorded yet.";
+        categoryList.appendChild(item);
+    } else {
+        categories.forEach(function (category) {
+            const item = document.createElement("li");
+
+            item.textContent =
+                category + ": " +
+                expensesByCategory[category].toFixed(2);
+
+            categoryList.appendChild(item);
+        });
     }
+
+    monthlySummaryList.innerHTML = "";
+
+    const monthlyTotals = {};
+
+    transactions.forEach(function (transaction) {
+        const month = transaction.date.slice(0, 7);
+
+        if (!monthlyTotals[month]) {
+            monthlyTotals[month] = {
+                income: 0,
+                expenses: 0
+            };
+        }
+
+        if (transaction.type === "income") {
+            monthlyTotals[month].income += transaction.amount;
+        } else {
+            monthlyTotals[month].expenses += transaction.amount;
+        }
+    });
+
+    const months = Object.keys(monthlyTotals).sort().reverse();
+
+    if (months.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 4;
+        cell.textContent = "No monthly data available yet.";
+
+        row.appendChild(cell);
+        monthlySummaryList.appendChild(row);
+    } else {
+        months.forEach(function (month) {
+            const totals = monthlyTotals[month];
+            const row = document.createElement("tr");
+
+            const monthCell = document.createElement("td");
+            monthCell.textContent = month;
+
+            const incomeCell = document.createElement("td");
+            incomeCell.textContent = totals.income.toFixed(2);
+
+            const expensesCell = document.createElement("td");
+            expensesCell.textContent = totals.expenses.toFixed(2);
+
+            const balanceCell = document.createElement("td");
+            balanceCell.textContent =
+                (totals.income - totals.expenses).toFixed(2);
+
+            row.append(
+                monthCell,
+                incomeCell,
+                expensesCell,
+                balanceCell
+            );
+
+            monthlySummaryList.appendChild(row);
+        });
+    }
+}
+
+function renderBudgets() {
+    budgetList.innerHTML = "";
+
+    const categories = Object.keys(budgets);
+
+    if (categories.length === 0) {
+        budgetList.textContent = "No budgets set yet.";
+        return;
+    }
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    categories.forEach(function (category) {
+        const spent = transactions.reduce(function (total, transaction) {
+            if (
+                transaction.type === "expense" &&
+                transaction.category === category &&
+                transaction.date.slice(0, 7) === currentMonth
+            ) {
+                return total + transaction.amount;
+            }
+
+            return total;
+        }, 0);
+
+        const limit = budgets[category];
+        const remaining = limit - spent;
+
+        const item = document.createElement("div");
+        const heading = document.createElement("h4");
+        const details = document.createElement("p");
+
+        heading.textContent = category + " Budget";
+
+        details.textContent =
+            "Limit: " + limit.toFixed(2) +
+            " | Spent this month: " + spent.toFixed(2) +
+            " | Remaining: " + remaining.toFixed(2);
+
+        item.append(heading, details);
+
+        if (remaining < 0) {
+            const warning = document.createElement("p");
+            warning.textContent = "Budget exceeded!";
+            item.appendChild(warning);
+        }
+
+        budgetList.appendChild(item);
+    });
+}
 
     function displayTransaction(transaction) {
         const row = document.createElement("tr");
@@ -80,6 +235,24 @@ const sortTransactions =
         dateCell.textContent = transaction.date;
 
         const actionCell = document.createElement("td");
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.type = "button";
+
+        editButton.addEventListener("click", function () {
+            editingTransaction = transaction;
+            document.getElementById("description").value = transaction.description;
+            document.getElementById("amount").value = transaction.amount;
+            document.getElementById("type").value = transaction.type;
+            document.getElementById("category").value = transaction.category;
+            document.getElementById("date").value = transaction.date;
+
+            transactionForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+
+        actionCell.appendChild(editButton);
+
         const deleteButton = document.createElement("button");
 
         deleteButton.textContent = "Delete";
@@ -106,6 +279,7 @@ const sortTransactions =
 
                  renderTransactions();
                 updateSummary();
+                renderBudgets();
             }
         });
 
@@ -190,19 +364,131 @@ function isValidDate(dateString) {
     return;
 }
 
-        transactions.push(transaction);
+        if (editingTransaction) {
+            Object.assign(editingTransaction, transaction);
+            editingTransaction = null;
+        } else {
+            transactions.push(transaction);
+        }
 
         localStorage.setItem(
             "transactions",
             JSON.stringify(transactions)
         );
 
-          renderTransactions();
+        renderTransactions();
         updateSummary();
+        renderBudgets();
         transactionForm.reset();
     });
+    budgetForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const category = budgetCategory.value;
+    const amount = Number(budgetAmount.value);
+
+    if (!category || !Number.isFinite(amount) || amount <= 0) {
+        alert("Please choose a category and enter a valid budget.");
+        return;
+    }
+
+    budgets[category] = amount;
+
+    localStorage.setItem("budgets", JSON.stringify(budgets));
+
+    renderBudgets();
+    budgetForm.reset();
+});
 
     
+
+    const exportButton = document.getElementById("export-transactions");
+    const importFile = document.getElementById("import-file");
+
+    if (exportButton) {
+        exportButton.addEventListener("click", function () {
+            const data = JSON.stringify(transactions, null, 2);
+            const blob = new Blob([data], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = "student-finance-transactions.json";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    if (importFile) {
+        importFile.addEventListener("change", function () {
+            const file = importFile.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = function () {
+                try {
+                    const imported = JSON.parse(reader.result);
+                    const validDate = value => {
+                        if (typeof value !== "string" ||
+                            !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+                        const date = new Date(value + "T00:00:00");
+                        return !Number.isNaN(date.getTime()) &&
+                            date.getFullYear() === Number(value.slice(0, 4)) &&
+                            date.getMonth() + 1 === Number(value.slice(5, 7)) &&
+                            date.getDate() === Number(value.slice(8, 10));
+                    };
+
+                    const validTransactions = Array.isArray(imported) &&
+                        imported.every(t =>
+                            t &&
+                            typeof t.description === "string" &&
+                            t.description.trim() !== "" &&
+                            typeof t.amount === "number" &&
+                            Number.isFinite(t.amount) &&
+                            t.amount > 0 &&
+                            ["income", "expense"].includes(t.type) &&
+                            typeof t.category === "string" &&
+                            t.category.trim() !== "" &&
+                            validDate(t.date)
+                        );
+
+                    if (!validTransactions) {
+                        alert("Import failed: the JSON file has invalid transaction data.");
+                        return;
+                    }
+
+                    const confirmed = confirm(
+                        "Import " + imported.length +
+                        " transactions? This will replace your current transactions."
+                    );
+
+                    if (!confirmed) return;
+
+                    transactions.splice(0, transactions.length, ...imported);
+                    localStorage.setItem("transactions", JSON.stringify(transactions));
+                    renderTransactions();
+                    updateSummary();
+                    renderBudgets();
+                    alert("Transactions imported successfully.");
+                } catch (error) {
+                    alert("Import failed: please choose a valid JSON backup file.");
+                } finally {
+                    importFile.value = "";
+                }
+            };
+
+            reader.onerror = function () {
+                alert("Could not read the selected file.");
+                importFile.value = "";
+            };
+
+            reader.readAsText(file);
+        });
+    }
+
     function renderTransactions() {
         transactionList.innerHTML = "";
 
@@ -237,5 +523,6 @@ function isValidDate(dateString) {
 
     renderTransactions();
     updateSummary();
+    renderBudgets();
 });
 
