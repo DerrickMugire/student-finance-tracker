@@ -1,5 +1,38 @@
 
 document.addEventListener("DOMContentLoaded", function () {
+    const currencySelect = document.getElementById("currency-select");
+    let selectedCurrency = localStorage.getItem("displayCurrency") || "RWF";
+
+    const currencyLocales = {
+        RWF: "en-RW",
+        USD: "en-US",
+        EUR: "en-IE"
+    };
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat(
+            currencyLocales[selectedCurrency] || "en",
+            {
+                style: "currency",
+                currency: selectedCurrency,
+                maximumFractionDigits: selectedCurrency === "RWF" ? 0 : 2
+            }
+        ).format(amount);
+    }
+
+    if (currencySelect) {
+        currencySelect.value = selectedCurrency;
+
+        currencySelect.addEventListener("change", function () {
+            selectedCurrency = currencySelect.value;
+            localStorage.setItem("displayCurrency", selectedCurrency);
+
+            updateSummary();
+            renderBudgets();
+
+            renderTransactions();
+        });
+    }
     const transactionForm = document.getElementById("transaction-form");
     const transactionList = document.getElementById("transaction-list");
    const transactionSearch =
@@ -55,10 +88,10 @@ function updateSummary() {
         }
     });
 
-    totalIncomeElement.textContent = totalIncome.toFixed(2);
-    totalExpensesElement.textContent = totalExpenses.toFixed(2);
+    totalIncomeElement.textContent = formatCurrency(totalIncome);
+    totalExpensesElement.textContent = formatCurrency(totalExpenses);
     balanceElement.textContent =
-        (totalIncome - totalExpenses).toFixed(2);
+        formatCurrency(totalIncome - totalExpenses);
 
     transactionCountElement.textContent = transactions.length;
 
@@ -80,8 +113,8 @@ function updateSummary() {
         }))
         : 0;
 
-    averageExpenseElement.textContent = averageExpense.toFixed(2);
-    largestExpenseElement.textContent = largestExpense.toFixed(2);
+    averageExpenseElement.textContent = formatCurrency(averageExpense);
+    largestExpenseElement.textContent = formatCurrency(largestExpense);
 
     categoryList.innerHTML = "";
 
@@ -97,7 +130,7 @@ function updateSummary() {
 
             item.textContent =
                 category + ": " +
-                expensesByCategory[category].toFixed(2);
+                formatCurrency(expensesByCategory[category]);
 
             categoryList.appendChild(item);
         });
@@ -144,14 +177,14 @@ function updateSummary() {
             monthCell.textContent = month;
 
             const incomeCell = document.createElement("td");
-            incomeCell.textContent = totals.income.toFixed(2);
+            incomeCell.textContent = formatCurrency(totals.income);
 
             const expensesCell = document.createElement("td");
-            expensesCell.textContent = totals.expenses.toFixed(2);
+            expensesCell.textContent = formatCurrency(totals.expenses);
 
             const balanceCell = document.createElement("td");
             balanceCell.textContent =
-                (totals.income - totals.expenses).toFixed(2);
+                formatCurrency(totals.income - totals.expenses);
 
             row.append(
                 monthCell,
@@ -200,9 +233,9 @@ function renderBudgets() {
         heading.textContent = category + " Budget";
 
         details.textContent =
-            "Limit: " + limit.toFixed(2) +
-            " | Spent this month: " + spent.toFixed(2) +
-            " | Remaining: " + remaining.toFixed(2);
+            "Limit: " + formatCurrency(limit) +
+            " | Spent this month: " + formatCurrency(spent) +
+            " | Remaining: " + formatCurrency(remaining);
 
         item.append(heading, details);
 
@@ -223,7 +256,7 @@ function renderBudgets() {
         descriptionCell.textContent = transaction.description;
 
         const amountCell = document.createElement("td");
-        amountCell.textContent = transaction.amount.toFixed(2);
+        amountCell.textContent = formatCurrency(transaction.amount);
 
         const typeCell = document.createElement("td");
         typeCell.textContent = transaction.type;
