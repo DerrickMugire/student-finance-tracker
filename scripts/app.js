@@ -196,6 +196,128 @@ function updateSummary() {
             monthlySummaryList.appendChild(row);
         });
     }
+
+    updateCharts();
+}
+
+function updateCharts() {
+    const categoryTotals = {};
+    const monthlyTotals = {};
+
+    transactions.forEach(function (transaction) {
+        const amount = Number(transaction.amount) || 0;
+
+        if (transaction.type === "expense") {
+            const category = transaction.category || "Other";
+            categoryTotals[category] =
+                (categoryTotals[category] || 0) + amount;
+        }
+
+        const month = transaction.date.slice(0, 7);
+
+        if (!monthlyTotals[month]) {
+            monthlyTotals[month] = { income: 0, expenses: 0 };
+        }
+
+        if (transaction.type === "income") {
+            monthlyTotals[month].income += amount;
+        } else {
+            monthlyTotals[month].expenses += amount;
+        }
+    });
+
+    const categoryCanvas = document.getElementById("category-chart");
+    const monthlyCanvas = document.getElementById("monthly-chart");
+
+    if (!window.Chart || !categoryCanvas || !monthlyCanvas) {
+        console.warn("Charts could not load. Check the Chart.js script.");
+        return;
+    }
+
+    if (window.categoryChart) {
+        window.categoryChart.destroy();
+    }
+
+    window.categoryChart = new Chart(categoryCanvas, {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(categoryTotals),
+            datasets: [{
+                label: "Expenses",
+                data: Object.values(categoryTotals),
+                backgroundColor: [
+                    "#2563eb", "#16a34a", "#f59e0b",
+                    "#dc2626", "#9333ea", "#0891b2",
+                    "#db2777", "#64748b"
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.label + ": " +
+                                formatCurrency(context.parsed);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const months = Object.keys(monthlyTotals).sort();
+
+    if (window.monthlyChart) {
+        window.monthlyChart.destroy();
+    }
+
+    window.monthlyChart = new Chart(monthlyCanvas, {
+        type: "bar",
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: "Income",
+                    data: months.map(function (month) {
+                        return monthlyTotals[month].income;
+                    }),
+                    backgroundColor: "#16a34a"
+                },
+                {
+                    label: "Expenses",
+                    data: months.map(function (month) {
+                        return monthlyTotals[month].expenses;
+                    }),
+                    backgroundColor: "#dc2626"
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ": " +
+                                formatCurrency(context.parsed.y);
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function renderBudgets() {

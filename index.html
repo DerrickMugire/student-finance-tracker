@@ -25,6 +25,23 @@
         <p>This section summarizes your student spending.</p>
     </section>
 
+    <section id="charts">
+        <h2>Visual Spending Reports</h2>
+        <p>Explore your expenses by category and compare monthly income with expenses.</p>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Expenses by Category</h3>
+                <canvas id="category-chart" aria-label="Expenses by category chart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>Monthly Income vs Expenses</h3>
+                <canvas id="monthly-chart" aria-label="Monthly income and expenses chart"></canvas>
+            </div>
+        </div>
+    </section>
+
 <section id="transactions">
     <h2>Your Transactions</h2>
     <p>This section will show and help you manage your income and expenses.</p>
@@ -207,6 +224,7 @@
     </section>
 
 </main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="scripts/app.js" defer></script>
 </body>
 </html>
